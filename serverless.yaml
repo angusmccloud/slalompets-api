@@ -1,0 +1,62 @@
+service: corgis
+
+frameworkVersion: ">=1.1.0 <2.0.0"
+
+provider:
+  name: aws
+  runtime: nodejs8.10
+  stage: prod
+  region: us-east-1
+  environment:
+    IMAGE_TABLE: ${self:service}-${opt:stage, self:provider.stage}-images
+    fallbackText: 'Corgis, all day, every day!'
+    commandColor: '#36a64f'
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:DeleteItem
+        - dynamodb:UpdateItem
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+      Resource: "*"
+
+functions:
+  imageCreate:
+    handler: api/image.submit
+    memorySize: 128
+    description: Create reference a new image
+    events:
+      - http:
+          path: image
+          method: post
+  imageGet:
+    handler: api/image.get
+    memorySize: 128
+    description: Get a single image
+    events:
+      - http:
+          path: image
+          method: get
+
+resources:
+  Resources:
+    ImagesDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: "imageId"
+            AttributeType: "S"
+        KeySchema:
+          -
+            AttributeName: "imageId"
+            KeyType: "HASH"
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        StreamSpecification:
+          StreamViewType: "NEW_AND_OLD_IMAGES"
+        TableName: ${self:provider.environment.IMAGE_TABLE}
