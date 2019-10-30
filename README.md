@@ -1,4 +1,4 @@
-Purpose of this project: provide an easy way to create a Slack Slash Command that references a set of images and randomly sends one back to your command.
+Purpose of this project: provide an easy way to create a Slack Slash Command that references a set of images and randomly sends one back to your command, and give you an easy way to add more images to the possible ones to pull from.
 
 After cloning the repository and doing an NPM Install: 
 
@@ -10,3 +10,4 @@ Once you're connected to AWS and ready to deploy for a new Slash Command, go int
 
 To-Do:
 - Enable file uploading to S3 via a Lambda function so that you're not just referencing external images but can upload new ones
+- Allow the deletion of images from the dynamboDB table (and S3 once that's created)
