@@ -1,6 +1,6 @@
 Purpose of this project: provide an easy way to create a Slack Slash Command that references a set of images and randomly sends one back to your command, and give you an easy way to add more images to the possible ones to pull from.
 
-After cloning the repository and doing an NPM Install: 
+After cloning or forking the repository and doing an NPM Install: 
 
 Create an IAM Access Key: `https://console.aws.amazon.com/iam/home?#/users/serverless-agent`, click `Security credentials`, `Create access key`
 
