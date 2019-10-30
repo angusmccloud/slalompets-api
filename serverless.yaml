@@ -39,6 +39,22 @@ functions:
       - http:
           path: image
           method: get
+  imageList:
+    handler: api/image.list
+    memorySize: 128
+    description: Get list of all images
+    events:
+      - http:
+          path: image/list
+          method: get  
+  imageDelete:
+    handler: api/image.delete
+    memorySize: 128
+    description: Delete an image
+    events:
+      - http:
+          path: image/{id}
+          method: delete
 
 resources:
   Resources:
