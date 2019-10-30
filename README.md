@@ -10,4 +10,4 @@ Once you're connected to AWS and ready to deploy for a new Slash Command, go int
 
 To-Do:
 - Enable file uploading to S3 via a Lambda function so that you're not just referencing external images but can upload new ones
-- Allow the deletion of images from the dynamboDB table (and S3 once that's created)
+- Add authentication, at least on delete and add image

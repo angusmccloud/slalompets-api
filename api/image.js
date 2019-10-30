@@ -119,7 +119,7 @@ module.exports.list = (event, context, callback) => {
       return callback(null, {
         statusCode: 200,
         body: JSON.stringify({
-          users: data.Items
+          images: data.Items
         })
       });
     }
