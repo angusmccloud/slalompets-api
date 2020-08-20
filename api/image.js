@@ -4,16 +4,24 @@ const AWS = require('aws-sdk');
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
 module.exports.submit = (event, context, callback) => {
+  /** Immediate response for WarmUP plugin so things don't keep running */
+  if (event.source === 'serverless-plugin-warmup') {
+    console.log('WarmUP - Lambda is warm!')
+    return callback(null, 'Lambda is warm!')
+  }
+
   const requestBody = JSON.parse(event.body);
   const image = requestBody.image;
+  const theme = requestBody.theme;
+  const caption = requestBody.caption;
 
-  if (typeof image !== 'string') {
+  if (typeof image !== 'string' || typeof theme !== 'string' || typeof caption !== 'string') {
     console.error('Validation Failed');
-    callback(new Error('Couldn\'t submit image because of no image URL was passed.'));
+    callback(new Error('Couldn\'t submit image because you didn\'t pass all 3 required fields: image, theme, and caption.'));
     return;
   }
 
-  submitImageP(image)
+  submitImageP(image, theme, caption)
     .then(res => {
       callback(null, {
         statusCode: 200,
@@ -35,9 +43,22 @@ module.exports.submit = (event, context, callback) => {
 };
 
 module.exports.get = (event, context, callback) => {
+  /** Immediate response for WarmUP plugin so things don't keep running */
+  if (event.source === 'serverless-plugin-warmup') {
+    console.log('WarmUP - Lambda is warm!')
+    return callback(null, 'Lambda is warm!')
+  }
+
+  const theme = event.pathParameters.theme;
+
   var params = {
     TableName: process.env.IMAGE_TABLE,
-    ProjectionExpression: "imageUrl"
+    ProjectionExpression: "imageUrl, caption",
+    FilterExpression: 'activeFlag = :active and theme = :theme',
+    ExpressionAttributeValues : {
+      ':active': true,
+      ':theme': theme,
+    }
   };
 
   console.log("Scanning Image table.");
@@ -54,12 +75,16 @@ module.exports.get = (event, context, callback) => {
         statusCode: 200,
         body: JSON.stringify({
           response_type: 'in_channel',
-          attachments: [
+          blocks: [
             {
-              fallback: process.env.fallbackText,
-              color: process.env.commandColor,
+              type: 'image',
+              title: {
+                type: "plain_text",
+                text: image.caption,
+                emoji: true
+              },
               image_url: image.imageUrl,
-              thumb_url: image.imageUrl
+              alt_text: image.caption
             }
           ]
         })
@@ -71,6 +96,12 @@ module.exports.get = (event, context, callback) => {
 };
 
 module.exports.delete = (event, context, callback) => {
+  /** Immediate response for WarmUP plugin so things don't keep running */
+  if (event.source === 'serverless-plugin-warmup') {
+    console.log('WarmUP - Lambda is warm!')
+    return callback(null, 'Lambda is warm!')
+  }
+
   const imageId = event.pathParameters.id;
 
 	if (typeof imageId !== 'string') {
@@ -100,9 +131,15 @@ module.exports.delete = (event, context, callback) => {
 };
 
 module.exports.list = (event, context, callback) => {
+  /** Immediate response for WarmUP plugin so things don't keep running */
+  if (event.source === 'serverless-plugin-warmup') {
+    console.log('WarmUP - Lambda is warm!')
+    return callback(null, 'Lambda is warm!')
+  }
+
   var params = {
     TableName: process.env.IMAGE_TABLE,
-    ProjectionExpression: "imageId, imageUrl, submittedAt, updatedAt",
+    ProjectionExpression: "imageId, caption, theme, imageUrl, submittedAt, updatedAt",
     FilterExpression: 'activeFlag = :active',
     ExpressionAttributeValues : {
       ':active': true,
@@ -127,11 +164,51 @@ module.exports.list = (event, context, callback) => {
   dynamoDb.scan(params, onScan);
 };
 
-const submitImageP = (image) => {
+
+module.exports.listTheme = (event, context, callback) => {
+  /** Immediate response for WarmUP plugin so things don't keep running */
+  if (event.source === 'serverless-plugin-warmup') {
+    console.log('WarmUP - Lambda is warm!')
+    return callback(null, 'Lambda is warm!')
+  }
+
+  const theme = event.pathParameters.theme;
+
+  var params = {
+    TableName: process.env.IMAGE_TABLE,
+    ProjectionExpression: "imageId, imageUrl, caption, submittedAt, updatedAt",
+    FilterExpression: 'activeFlag = :active and theme = :theme',
+    ExpressionAttributeValues : {
+      ':active': true,
+      ':theme': theme,
+    }
+  };
+
+  console.log("Scanning Image table");
+  const onScan = (err, data) => {
+    if (err) {
+      console.log('Scan failed to load data. Error JSON:', JSON.stringify(err, null, 2));
+      callback(err);
+    } else {
+      console.log("Scan succeeded.");
+      return callback(null, {
+        statusCode: 200,
+        body: JSON.stringify({
+          images: data.Items
+        })
+      });
+    }
+  };
+  dynamoDb.scan(params, onScan);
+};
+
+const submitImageP = (image, theme, caption) => {
   const timestamp = new Date().getTime();
   const imageData = {
     imageId: uuid.v1(),
     imageUrl: image,
+    theme: theme,
+    caption: caption,
     submittedAt: timestamp,
     updatedAt: timestamp,
 		activeFlag: true,

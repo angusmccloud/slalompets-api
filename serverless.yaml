@@ -1,16 +1,18 @@
-service: corgis
+service: slackimages
 
 frameworkVersion: ">=1.1.0 <2.0.0"
 
+plugins:
+  - serverless-plugin-warmup
+  - serverless-dotenv-plugin
+
 provider:
   name: aws
-  runtime: nodejs8.10
+  runtime: nodejs10.x
   stage: prod
   region: us-east-1
   environment:
     IMAGE_TABLE: ${self:service}-${opt:stage, self:provider.stage}-images
-    fallbackText: 'Corgis, all day, every day!'
-    commandColor: '#36a64f'
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -24,36 +26,49 @@ provider:
 
 functions:
   imageCreate:
+    warmup: false
+    prewarm: false
     handler: api/image.submit
-    memorySize: 128
     description: Create reference a new image
     events:
       - http:
-          path: image
+          path: image/submit
           method: post
   imageGet:
+    warmup: true
+    prewarm: true
     handler: api/image.get
-    memorySize: 128
-    description: Get a single image
+    description: Get a single image, by theme
     events:
       - http:
-          path: image
+          path: image/get/{theme}
           method: get
   imageList:
+    warmup: false
+    prewarm: false
     handler: api/image.list
-    memorySize: 128
     description: Get list of all images
     events:
       - http:
           path: image/list
           method: get  
+  imageListTheme:
+    warmup: false
+    prewarm: false
+    handler: api/image.listTheme
+    description: Get list of all images for a theme
+    events:
+      - http:
+          path: image/list/{theme}
+          method: get  
   imageDelete:
+    warmup: false
+    prewarm: false
     handler: api/image.delete
-    memorySize: 128
     description: Delete an image
     events:
       - http:
-          path: image/{id}
+          path: image/delete/{id}
           method: delete
 
 resources:
@@ -70,9 +85,7 @@ resources:
           -
             AttributeName: "imageId"
             KeyType: "HASH"
-        ProvisionedThroughput:
-          ReadCapacityUnits: 1
-          WriteCapacityUnits: 1
+        BillingMode: PAY_PER_REQUEST
         StreamSpecification:
           StreamViewType: "NEW_AND_OLD_IMAGES"
         TableName: ${self:provider.environment.IMAGE_TABLE}
