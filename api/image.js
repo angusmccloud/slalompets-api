@@ -42,7 +42,7 @@ module.exports.submit = (event, context, callback) => {
     });
 };
 
-module.exports.get = (event, context, callback) => {
+module.exports.get = async (event, context, callback) => {
   /** Immediate response for WarmUP plugin so things don't keep running */
   if (event.source === 'serverless-plugin-warmup') {
     console.log('WarmUP - Lambda is warm!')
@@ -50,49 +50,65 @@ module.exports.get = (event, context, callback) => {
   }
 
   const theme = event.pathParameters.theme;
+  var fetchMoreData = true;
+  var allImages = [];
+  var startKey;
+  var params;
 
-  var params = {
-    TableName: process.env.IMAGE_TABLE,
-    ProjectionExpression: "imageUrl, caption",
-    FilterExpression: 'activeFlag = :active and theme = :theme',
-    ExpressionAttributeValues : {
-      ':active': true,
-      ':theme': theme,
-    }
-  };
 
-  console.log("Scanning Image table.");
-  const onScan = (err, data) => {
-
-    if (err) {
-      console.log('Scan failed to load data. Error JSON:', JSON.stringify(err, null, 2));
-      callback(err);
+  while (fetchMoreData) {
+    if (!startKey) {
+      params = {
+        TableName: process.env.IMAGE_TABLE,
+        ProjectionExpression: "imageUrl, caption",
+        FilterExpression: 'activeFlag = :active and theme = :theme',
+        ExpressionAttributeValues: {
+          ':active': true,
+          ':theme': theme,
+        }
+      };
     } else {
-      console.log("Scan succeeded.");
-      var imageArray = data.Items;
-      var image = imageArray[Math.floor(Math.random()*imageArray.length)];
-      return callback(null, {
-        statusCode: 200,
-        body: JSON.stringify({
-          response_type: 'in_channel',
-          blocks: [
-            {
-              type: 'image',
-              title: {
-                type: "plain_text",
-                text: image.caption,
-                emoji: true
-              },
-              image_url: image.imageUrl,
-              alt_text: image.caption
-            }
-          ]
-        })
-      });
+      params = {
+        TableName: process.env.IMAGE_TABLE,
+        ProjectionExpression: "imageUrl, caption",
+        FilterExpression: 'activeFlag = :active and theme = :theme',
+        ExpressionAttributeValues: {
+          ':active': true,
+          ':theme': theme,
+        },
+        ExclusiveStartKey: { imageId: startKey }
+      };
     }
 
-  };
-  dynamoDb.scan(params, onScan);
+    const result = await dynamoDb.scan(params).promise();
+    var thisResult = result.Items;
+    allImages = allImages.concat(thisResult);
+    if (result.LastEvaluatedKey) {
+      startKey = result.LastEvaluatedKey.imageId;
+    } else {
+      fetchMoreData = false;
+    }
+  }
+
+  var image = allImages[Math.floor(Math.random() * allImages.length)];
+  return callback(null, {
+    statusCode: 200,
+    body: JSON.stringify({
+      response_type: 'in_channel',
+      blocks: [
+        {
+          type: 'image',
+          title: {
+            type: "plain_text",
+            text: image.caption,
+            emoji: true
+          },
+          image_url: image.imageUrl,
+          alt_text: image.caption
+        }
+      ]
+    })
+  });
 };
 
 module.exports.delete = (event, context, callback) => {
@@ -104,7 +120,7 @@ module.exports.delete = (event, context, callback) => {
 
   const imageId = event.pathParameters.id;
 
-	if (typeof imageId !== 'string') {
+  if (typeof imageId !== 'string') {
     console.error('Validation Failed');
     callback(new Error('Couldn\'t delete image because of validation errors.'));
     return;
@@ -141,7 +157,7 @@ module.exports.list = (event, context, callback) => {
     TableName: process.env.IMAGE_TABLE,
     ProjectionExpression: "imageId, caption, theme, imageUrl, submittedAt, updatedAt",
     FilterExpression: 'activeFlag = :active',
-    ExpressionAttributeValues : {
+    ExpressionAttributeValues: {
       ':active': true,
     }
   };
@@ -178,7 +194,7 @@ module.exports.listTheme = (event, context, callback) => {
     TableName: process.env.IMAGE_TABLE,
     ProjectionExpression: "imageId, imageUrl, caption, submittedAt, updatedAt",
     FilterExpression: 'activeFlag = :active and theme = :theme',
-    ExpressionAttributeValues : {
+    ExpressionAttributeValues: {
       ':active': true,
       ':theme': theme,
     }
@@ -211,7 +227,7 @@ const submitImageP = (image, theme, caption) => {
     caption: caption,
     submittedAt: timestamp,
     updatedAt: timestamp,
-		activeFlag: true,
+    activeFlag: true,
   }
 
   console.log('Submitting Image');
@@ -224,19 +240,19 @@ const submitImageP = (image, theme, caption) => {
 };
 
 const deleteImageP = (imageId) => {
-	console.log('Deleting Image');
-	const timestamp = new Date().getTime();
+  console.log('Deleting Image');
+  const timestamp = new Date().getTime();
   const imageInfo = {
     TableName: process.env.IMAGE_TABLE,
-		Key: {
-			"imageId": imageId
-		},
+    Key: {
+      "imageId": imageId
+    },
     UpdateExpression: "set activeFlag = :y, updatedAt = :z",
-		ExpressionAttributeValues: {
-			":y": false,
+    ExpressionAttributeValues: {
+      ":y": false,
       ":z": timestamp,
     }
   };
-	return dynamoDb.update(imageInfo).promise()
-		.then(res => timestamp);
+  return dynamoDb.update(imageInfo).promise()
+    .then(res => timestamp);
 };
