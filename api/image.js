@@ -146,42 +146,62 @@ module.exports.delete = (event, context, callback) => {
     });
 };
 
-module.exports.list = (event, context, callback) => {
+module.exports.list = async (event, context, callback) => {
   /** Immediate response for WarmUP plugin so things don't keep running */
   if (event.source === 'serverless-plugin-warmup') {
     console.log('WarmUP - Lambda is warm!')
     return callback(null, 'Lambda is warm!')
   }
 
-  var params = {
-    TableName: process.env.IMAGE_TABLE,
-    ProjectionExpression: "imageId, caption, theme, imageUrl, submittedAt, updatedAt",
-    FilterExpression: 'activeFlag = :active',
-    ExpressionAttributeValues: {
-      ':active': true,
-    }
-  };
+//  const theme = event.pathParameters.theme;
+  var fetchMoreData = true;
+  var allImages = [];
+  var startKey;
+  var params;
 
-  console.log("Scanning Image table");
-  const onScan = (err, data) => {
-    if (err) {
-      console.log('Scan failed to load data. Error JSON:', JSON.stringify(err, null, 2));
-      callback(err);
+  while (fetchMoreData) {
+    if (!startKey) {
+      params = {
+        TableName: process.env.IMAGE_TABLE,
+        ProjectionExpression: "imageId, caption, theme, imageUrl, submittedAt, updatedAt",
+        FilterExpression: 'activeFlag = :active',
+        ExpressionAttributeValues: {
+          ':active': true,
+        }
+      };
     } else {
-      console.log("Scan succeeded.");
-      return callback(null, {
-        statusCode: 200,
-        body: JSON.stringify({
-          images: data.Items
-        })
-      });
+      params = {
+        TableName: process.env.IMAGE_TABLE,
+        ProjectionExpression: "imageId, caption, theme, imageUrl, submittedAt, updatedAt",
+        FilterExpression: 'activeFlag = :active',
+        ExpressionAttributeValues: {
+          ':active': true,
+        },
+        ExclusiveStartKey: { imageId: startKey }
+      };
     }
-  };
-  dynamoDb.scan(params, onScan);
+
+    const result = await dynamoDb.scan(params).promise();
+    var thisResult = result.Items;
+    allImages = allImages.concat(thisResult);
+    if (result.LastEvaluatedKey) {
+      startKey = result.LastEvaluatedKey.imageId;
+    } else {
+      fetchMoreData = false;
+    }
+  }
+
+  console.log("Scan succeeded.");
+  return callback(null, {
+    statusCode: 200,
+    body: JSON.stringify({
+      images: allImages
+    })
+  });
 };
 
 
-module.exports.listTheme = (event, context, callback) => {
+module.exports.listTheme = async (event, context, callback) => {
   /** Immediate response for WarmUP plugin so things don't keep running */
   if (event.source === 'serverless-plugin-warmup') {
     console.log('WarmUP - Lambda is warm!')
@@ -189,33 +209,52 @@ module.exports.listTheme = (event, context, callback) => {
   }
 
   const theme = event.pathParameters.theme;
+  var fetchMoreData = true;
+  var allImages = [];
+  var startKey;
+  var params;
 
-  var params = {
-    TableName: process.env.IMAGE_TABLE,
-    ProjectionExpression: "imageId, imageUrl, caption, submittedAt, updatedAt",
-    FilterExpression: 'activeFlag = :active and theme = :theme',
-    ExpressionAttributeValues: {
-      ':active': true,
-      ':theme': theme,
-    }
-  };
-
-  console.log("Scanning Image table");
-  const onScan = (err, data) => {
-    if (err) {
-      console.log('Scan failed to load data. Error JSON:', JSON.stringify(err, null, 2));
-      callback(err);
+  while (fetchMoreData) {
+    if (!startKey) {
+      params = {
+        TableName: process.env.IMAGE_TABLE,
+        ProjectionExpression: "imageId, imageUrl, caption, submittedAt, updatedAt",
+        FilterExpression: 'activeFlag = :active and theme = :theme',
+        ExpressionAttributeValues: {
+          ':active': true,
+          ':theme': theme,
+        }
+      };
     } else {
-      console.log("Scan succeeded.");
-      return callback(null, {
-        statusCode: 200,
-        body: JSON.stringify({
-          images: data.Items
-        })
-      });
+      params = {
+        TableName: process.env.IMAGE_TABLE,
+        ProjectionExpression: "imageId, imageUrl, caption, submittedAt, updatedAt",
+        FilterExpression: 'activeFlag = :active and theme = :theme',
+        ExpressionAttributeValues: {
+          ':active': true,
+          ':theme': theme,
+        },
+        ExclusiveStartKey: { imageId: startKey }
+      };      
     }
-  };
-  dynamoDb.scan(params, onScan);
+
+    const result = await dynamoDb.scan(params).promise();
+    var thisResult = result.Items;
+    allImages = allImages.concat(thisResult);
+    if (result.LastEvaluatedKey) {
+      startKey = result.LastEvaluatedKey.imageId;
+    } else {
+      fetchMoreData = false;
+    }
+  }
+
+  console.log("Scan succeeded.");
+  return callback(null, {
+    statusCode: 200,
+    body: JSON.stringify({
+      images: allImages
+    })
+  });
 };
 
 const submitImageP = (image, theme, caption) => {
