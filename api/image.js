@@ -200,7 +200,6 @@ module.exports.list = async (event, context, callback) => {
   });
 };
 
-
 module.exports.listTheme = async (event, context, callback) => {
   /** Immediate response for WarmUP plugin so things don't keep running */
   if (event.source === 'serverless-plugin-warmup') {
@@ -294,4 +293,80 @@ const deleteImageP = (imageId) => {
   };
   return dynamoDb.update(imageInfo).promise()
     .then(res => timestamp);
+};
+
+module.exports.themeList = async (event, context, callback) => {
+  /** Immediate response for WarmUP plugin so things don't keep running */
+  if (event.source === 'serverless-plugin-warmup') {
+    console.log('WarmUP - Lambda is warm!')
+    return callback(null, 'Lambda is warm!')
+  }
+
+  var fetchMoreData = true;
+  var allImages = [];
+  var startKey;
+  var params;
+
+  while (fetchMoreData) {
+    if (!startKey) {
+      params = {
+        TableName: process.env.IMAGE_TABLE,
+        ProjectionExpression: "theme, imageId",
+        FilterExpression: 'activeFlag = :active',
+        ExpressionAttributeValues: {
+          ':active': true,
+        }
+      };
+    } else {
+      params = {
+        TableName: process.env.IMAGE_TABLE,
+        ProjectionExpression: "theme, imageId",
+        FilterExpression: 'activeFlag = :active',
+        ExpressionAttributeValues: {
+          ':active': true,
+        },
+        ExclusiveStartKey: { imageId: startKey }
+      };
+    }
+
+    const result = await dynamoDb.scan(params).promise();
+    var thisResult = result.Items;
+    allImages = allImages.concat(thisResult);
+    if (result.LastEvaluatedKey) {
+      startKey = result.LastEvaluatedKey.imageId;
+    } else {
+      fetchMoreData = false;
+    }
+  }
+
+  var themes = {};
+  for (var i = 0; i < allImages.length; i++) {
+    var theme = allImages[i].theme;
+    themes[theme] = {
+      theme: theme,
+      count: 0
+    };
+  }
+
+  for (var i = 0; i < allImages.length; i++) {
+    var theme = allImages[i].theme;
+    var currentCount = themes[theme].count;
+
+    themes[theme] = {
+      theme: theme,
+      count: currentCount + 1
+    };
+  }
+
+  var ordered = {};
+  Object.keys(themes).sort().forEach(function(key) {
+    ordered[key] = themes[key];
+  });
+
+  return callback(null, {
+    statusCode: 200,
+    body: JSON.stringify({
+      themes: ordered
+    })
+  });
 };

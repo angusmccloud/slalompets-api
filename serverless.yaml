@@ -69,6 +69,15 @@ functions:
       - http:
           path: image/delete/{id}
           method: delete
+  themeList:
+    warmup: false
+    prewarm: false
+    handler: api/image.themeList
+    description: See a list of current Themes
+    events:
+      - http:
+          path: image/theme-list
+          method: get
 
 resources:
   Resources:
