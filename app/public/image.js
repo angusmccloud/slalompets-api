@@ -3,6 +3,9 @@ const uuid = require('uuid');
 const AWS = require('aws-sdk');
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
+const getImageByKeywords = require('../functions/getImageByKeywords/getImageByKeywords');
+const formatForSlack = require('../functions/formatForSlack/formatForSlack');
+
 module.exports.submit = (event, context, callback) => {
   /** Immediate response for WarmUP plugin so things don't keep running */
   if (event.source === 'serverless-plugin-warmup') {
@@ -48,67 +51,29 @@ module.exports.get = async (event, context, callback) => {
     console.log('WarmUP - Lambda is warm!')
     return callback(null, 'Lambda is warm!')
   }
+  console.log('-- event --', event);
+  const request = event.queryStringParameters;
+  const passedText = request.text;
+  console.log('-- Search Term --', passedText);
+  // const workspaceId = requestBody.team_id;
+  // const userId = requestBody.user_id;
+  // const channelId = requestBody.channel_id;
 
-  const theme = event.pathParameters.theme;
-  var fetchMoreData = true;
-  var allImages = [];
-  var startKey;
-  var params;
+  const image = await getImageByKeywords(passedText);
+  const blockForSlack = await formatForSlack(image.imageUrl, image.caption);
+  console.log('-- blockForSlack --', blockForSlack);
+  console.log("-- Stringified --", JSON.stringify(blockForSlack));
 
 
-  while (fetchMoreData) {
-    if (!startKey) {
-      params = {
-        TableName: process.env.IMAGE_TABLE,
-        ProjectionExpression: "imageUrl, caption",
-        FilterExpression: 'activeFlag = :active and theme = :theme',
-        ExpressionAttributeValues: {
-          ':active': true,
-          ':theme': theme,
-        }
-      };
-    } else {
-      params = {
-        TableName: process.env.IMAGE_TABLE,
-        ProjectionExpression: "imageUrl, caption",
-        FilterExpression: 'activeFlag = :active and theme = :theme',
-        ExpressionAttributeValues: {
-          ':active': true,
-          ':theme': theme,
-        },
-        ExclusiveStartKey: { imageId: startKey }
-      };
-    }
-
-    const result = await dynamoDb.scan(params).promise();
-    var thisResult = result.Items;
-    allImages = allImages.concat(thisResult);
-    if (result.LastEvaluatedKey) {
-      startKey = result.LastEvaluatedKey.imageId;
-    } else {
-      fetchMoreData = false;
-    }
-  }
-
-  var image = allImages[Math.floor(Math.random() * allImages.length)];
-  return callback(null, {
+  const response = {
     statusCode: 200,
-    body: JSON.stringify({
-      response_type: 'in_channel',
-      blocks: [
-        {
-          type: 'image',
-          title: {
-            type: "plain_text",
-            text: image.caption,
-            emoji: true
-          },
-          image_url: image.imageUrl,
-          alt_text: image.caption
-        }
-      ]
-    })
-  });
+    headers: {
+        'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(blockForSlack)
+  };
+
+  callback(null, response);
 };
 
 module.exports.delete = (event, context, callback) => {

@@ -27,8 +27,6 @@ const getImageByKeywords = async (keywords) => {
             matchesAny.push(image);
         }
     }
-    // console.log('matchesAll: ', matchesAll);
-    // console.log('matchesAny: ', matchesAny);
     if (matchesAll.length > 0) {
         await shuffle(matchesAll);
         return matchesAll[0];

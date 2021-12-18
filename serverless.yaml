@@ -41,10 +41,10 @@ functions:
     warmup: true
     prewarm: true
     handler: app/public/image.get
-    description: Get a single image, by theme
+    description: Get a single image, can search by keywords
     events:
       - http:
-          path: image/get/{theme}
+          path: image/get
           method: get
   imageList:
     warmup: false
@@ -54,16 +54,7 @@ functions:
     events:
       - http:
           path: image/list
-          method: get  
-  # imageListTheme:
-  #   warmup: false
-  #   prewarm: false
-  #   handler: app/public/image.listTheme
-  #   description: Get list of all images for a theme
-  #   events:
-  #     - http:
-  #         path: image/list/{theme}
-  #         method: get  
+          method: get
   imageDelete:
     warmup: false
     prewarm: false
@@ -73,15 +64,6 @@ functions:
       - http:
           path: image/delete/{id}
           method: delete
-  # themeList:
-  #   warmup: false
-  #   prewarm: false
-  #   handler: app/public/image.themeList
-  #   description: See a list of current Themes
-  #   events:
-  #     - http:
-  #         path: image/theme-list
-  #         method: get
 
 resources:
   Resources:
