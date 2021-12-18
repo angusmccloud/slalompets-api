@@ -1,14 +1,15 @@
-service: slackimages
+service: slalompets
 
 frameworkVersion: ">=1.1.0 <2.0.0"
 
 plugins:
   - serverless-plugin-warmup
+  - serverless-dotenv-plugin
 
 provider:
   name: aws
-  runtime: nodejs10.x
-  stage: prod
+  runtime: nodejs14.x
+  stage: ${env:stage, 'dev'}
   region: us-east-1
   environment:
     IMAGE_TABLE: ${self:service}-${opt:stage, self:provider.stage}-images
@@ -51,15 +52,15 @@ functions:
       - http:
           path: image/list
           method: get  
-  imageListTheme:
-    warmup: false
-    prewarm: false
-    handler: api/image.listTheme
-    description: Get list of all images for a theme
-    events:
-      - http:
-          path: image/list/{theme}
-          method: get  
+  # imageListTheme:
+  #   warmup: false
+  #   prewarm: false
+  #   handler: api/image.listTheme
+  #   description: Get list of all images for a theme
+  #   events:
+  #     - http:
+  #         path: image/list/{theme}
+  #         method: get  
   imageDelete:
     warmup: false
     prewarm: false
@@ -69,15 +70,15 @@ functions:
       - http:
           path: image/delete/{id}
           method: delete
-  themeList:
-    warmup: false
-    prewarm: false
-    handler: api/image.themeList
-    description: See a list of current Themes
-    events:
-      - http:
-          path: image/theme-list
-          method: get
+  # themeList:
+  #   warmup: false
+  #   prewarm: false
+  #   handler: api/image.themeList
+  #   description: See a list of current Themes
+  #   events:
+  #     - http:
+  #         path: image/theme-list
+  #         method: get
 
 resources:
   Resources:
