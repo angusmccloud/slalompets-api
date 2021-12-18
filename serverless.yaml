@@ -25,6 +25,9 @@ provider:
       Resource: "*"
 
 functions:
+  testerFunction:
+    handler: app/private/tester.tester
+    description: Used for testing functions
   imageCreate:
     warmup: false
     prewarm: false

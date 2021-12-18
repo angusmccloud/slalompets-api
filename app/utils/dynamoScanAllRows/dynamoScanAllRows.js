@@ -4,7 +4,7 @@ const AWS = require('aws-sdk');
 AWS.config.setPromisesDependency(require('bluebird'));
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
-const dynamoScanAllRows = async (tableName = process.env.MOVIES_TABLE, fields = 'movieId, netflix, hulu, amazon', filterExpression = `objectType = :type AND adultFlag = :adultFlag`, expressionAttributeValues = {':type': 'movie', ':adultFlag': false}, tableUniqueKey = 'movieId') => {
+const dynamoScanAllRows = async (tableName = process.env.IMAGE_TABLE, fields = 'imageId, caption, url', filterExpression = `activeFlag = :activeFlag`, expressionAttributeValues = {':activeFlag': true}, tableUniqueKey = 'imageId') => {
   console.log('Fetching All Data from DynamoDB Table');
   let fetchMoreData = true;
   let allRows = [];

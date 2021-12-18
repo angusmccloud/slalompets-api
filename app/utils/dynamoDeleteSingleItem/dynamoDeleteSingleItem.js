@@ -4,7 +4,7 @@ const AWS = require('aws-sdk');
 AWS.config.setPromisesDependency(require('bluebird'));
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
-const dynamoDeleteSingleItem = async (tableName = process.env.MOVIES_TABLE, tableUniqueKey = 'movieId', keyValue = 'tt12345') => {
+const dynamoDeleteSingleItem = async (tableName = process.env.IMAGE_TABLE, tableUniqueKey = 'imageId', keyValue = 'abc123') => {
   console.log('Deleting Single Row from DynamoDB Table');
 
   try {
