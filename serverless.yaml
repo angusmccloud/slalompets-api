@@ -28,7 +28,7 @@ functions:
   imageCreate:
     warmup: false
     prewarm: false
-    handler: api/image.submit
+    handler: app/public/image.submit
     description: Create reference a new image
     events:
       - http:
@@ -37,7 +37,7 @@ functions:
   imageGet:
     warmup: true
     prewarm: true
-    handler: api/image.get
+    handler: app/public/image.get
     description: Get a single image, by theme
     events:
       - http:
@@ -46,7 +46,7 @@ functions:
   imageList:
     warmup: false
     prewarm: false
-    handler: api/image.list
+    handler: app/public/image.list
     description: Get list of all images
     events:
       - http:
@@ -55,7 +55,7 @@ functions:
   # imageListTheme:
   #   warmup: false
   #   prewarm: false
-  #   handler: api/image.listTheme
+  #   handler: app/public/image.listTheme
   #   description: Get list of all images for a theme
   #   events:
   #     - http:
@@ -64,7 +64,7 @@ functions:
   imageDelete:
     warmup: false
     prewarm: false
-    handler: api/image.delete
+    handler: app/public/image.delete
     description: Delete an image
     events:
       - http:
@@ -73,7 +73,7 @@ functions:
   # themeList:
   #   warmup: false
   #   prewarm: false
-  #   handler: api/image.themeList
+  #   handler: app/public/image.themeList
   #   description: See a list of current Themes
   #   events:
   #     - http:
