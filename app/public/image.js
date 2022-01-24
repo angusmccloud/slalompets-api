@@ -5,6 +5,7 @@ const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
 const getImageByKeywords = require('../functions/getImageByKeywords/getImageByKeywords');
 const formatForSlack = require('../functions/formatForSlack/formatForSlack');
+const getAllImages = require('../functions/getAllImages/getAllImages');
 
 module.exports.submit = (event, context, callback) => {
   /** Immediate response for WarmUP plugin so things don't keep running */
@@ -117,104 +118,15 @@ module.exports.list = async (event, context, callback) => {
     console.log('WarmUP - Lambda is warm!')
     return callback(null, 'Lambda is warm!')
   }
+  const allImages = await getAllImages();
 
-//  const theme = event.pathParameters.theme;
-  var fetchMoreData = true;
-  var allImages = [];
-  var startKey;
-  var params;
-
-  while (fetchMoreData) {
-    if (!startKey) {
-      params = {
-        TableName: process.env.IMAGE_TABLE,
-        ProjectionExpression: "imageId, caption, theme, imageUrl, submittedAt, updatedAt",
-        FilterExpression: 'activeFlag = :active',
-        ExpressionAttributeValues: {
-          ':active': true,
-        }
-      };
-    } else {
-      params = {
-        TableName: process.env.IMAGE_TABLE,
-        ProjectionExpression: "imageId, caption, theme, imageUrl, submittedAt, updatedAt",
-        FilterExpression: 'activeFlag = :active',
-        ExpressionAttributeValues: {
-          ':active': true,
-        },
-        ExclusiveStartKey: { imageId: startKey }
-      };
-    }
-
-    const result = await dynamoDb.scan(params).promise();
-    var thisResult = result.Items;
-    allImages = allImages.concat(thisResult);
-    if (result.LastEvaluatedKey) {
-      startKey = result.LastEvaluatedKey.imageId;
-    } else {
-      fetchMoreData = false;
-    }
-  }
-
-  console.log("Scan succeeded.");
   return callback(null, {
     statusCode: 200,
-    body: JSON.stringify({
-      images: allImages
-    })
-  });
-};
-
-module.exports.listTheme = async (event, context, callback) => {
-  /** Immediate response for WarmUP plugin so things don't keep running */
-  if (event.source === 'serverless-plugin-warmup') {
-    console.log('WarmUP - Lambda is warm!')
-    return callback(null, 'Lambda is warm!')
-  }
-
-  const theme = event.pathParameters.theme;
-  var fetchMoreData = true;
-  var allImages = [];
-  var startKey;
-  var params;
-
-  while (fetchMoreData) {
-    if (!startKey) {
-      params = {
-        TableName: process.env.IMAGE_TABLE,
-        ProjectionExpression: "imageId, imageUrl, caption, submittedAt, updatedAt",
-        FilterExpression: 'activeFlag = :active and theme = :theme',
-        ExpressionAttributeValues: {
-          ':active': true,
-          ':theme': theme,
-        }
-      };
-    } else {
-      params = {
-        TableName: process.env.IMAGE_TABLE,
-        ProjectionExpression: "imageId, imageUrl, caption, submittedAt, updatedAt",
-        FilterExpression: 'activeFlag = :active and theme = :theme',
-        ExpressionAttributeValues: {
-          ':active': true,
-          ':theme': theme,
-        },
-        ExclusiveStartKey: { imageId: startKey }
-      };      
-    }
-
-    const result = await dynamoDb.scan(params).promise();
-    var thisResult = result.Items;
-    allImages = allImages.concat(thisResult);
-    if (result.LastEvaluatedKey) {
-      startKey = result.LastEvaluatedKey.imageId;
-    } else {
-      fetchMoreData = false;
-    }
-  }
-
-  console.log("Scan succeeded.");
-  return callback(null, {
-    statusCode: 200,
+    headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Credentials': true,
+    },
     body: JSON.stringify({
       images: allImages
     })
