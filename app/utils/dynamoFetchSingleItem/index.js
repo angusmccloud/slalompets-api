@@ -4,8 +4,8 @@ const AWS = require('aws-sdk');
 AWS.config.setPromisesDependency(require('bluebird'));
 const dynamoDb = new AWS.DynamoDB.DocumentClient();
 
-const dynamoDeleteSingleItem = async (tableName = process.env.IMAGE_TABLE, tableUniqueKey = 'imageId', keyValue = 'abc123') => {
-  console.log('Deleting Single Row from DynamoDB Table');
+const dynamoFetchSingleItem = async (tableName = process.env.CONTENT_TABLE, tableUniqueKey = 'contentId', keyValue = 'abc123') => {
+  console.log('Fetching Single Row from DynamoDB Table');
 
   try {
     let params = {
@@ -14,13 +14,13 @@ const dynamoDeleteSingleItem = async (tableName = process.env.IMAGE_TABLE, table
       },
       TableName: tableName
     };
-    const result = await dynamoDb.delete(params).promise();
+    const result = await dynamoDb.get(params).promise();
     const item = result.Item;
     return item;
   } catch (error) {
     console.error(error);
-    return 'Error deleting data';
+    return 'Error fetching data';
   }
 };
 
-module.exports = dynamoDeleteSingleItem;
+module.exports = dynamoFetchSingleItem;
