@@ -23,7 +23,9 @@ module.exports.tester = async () => {
     // const image = await getImageByKeywords('sherlock watson');
     // const forSlack = await formatForSlack(image.imageUrl, image.caption);
     // return forSlack;
-    const allImages = await getAllImages();
-    return allImages
+    // const allImages = await getAllImages();
+    // return allImages
+    addImage('https://slalompets-images.s3.amazonaws.com/chup1.jpg', 'Carrie\'s Kitty Chup!', 1654777641000);
+    addImage('https://slalompets-images.s3.amazonaws.com/chup2.jpg', 'Carrie\'s Kitty Chup Helping with Work!', 1654777641000);
 };
 
