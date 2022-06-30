@@ -1,4 +1,4 @@
-service: slalompets
+service: tparty2022
 
 frameworkVersion: ">=1.1.0 <2.0.0"
 
@@ -12,7 +12,8 @@ provider:
   stage: ${env:stage, 'dev'}
   region: us-east-1
   environment:
-    IMAGE_TABLE: ${self:service}-${opt:stage, self:provider.stage}-images
+    CONTENT_TABLE: ${self:service}-${opt:stage, self:provider.stage}-content
+    USER_POOL_ID: ${env:userPoolId}
   iamRoleStatements:
     - Effect: Allow
       Action:
@@ -22,38 +23,43 @@ provider:
         - dynamodb:UpdateItem
         - dynamodb:GetItem
         - dynamodb:PutItem
+        - cognito-idp:ListUsers
+        - lambda:InvokeFunction
+        - "sqs:SendMessage"
+        - "sqs:GetQueueUrl"
+        # Will need more here for S3 permissions
       Resource: "*"
 
 functions:
   testerFunction:
     handler: app/private/tester.tester
     description: Used for testing functions
-  imageCreate:
-    warmup: false
-    prewarm: false
-    handler: app/public/image.submit
-    description: Create reference a new image
+  contentCreate:
+    warmup: ${env:preWarm, false}
+    prewarm: ${env:preWarm, false}
+    handler: app/public/content.submit
+    description: Create a new piece of Content
     events:
       - http:
-          path: image/submit
+          path: content/submit
           method: post
-  imageGet:
-    warmup: true
-    prewarm: true
-    handler: app/public/image.get
-    description: Get a single image, can search by keywords
+          cors:
+              origin: '*'
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - Authorization
+                - X-Api-Key
+                - X-Amz-Security-Token
+              allowCredentials: true
+  contentGet:
+    warmup: ${env:preWarm, false}
+    prewarm: ${env:preWarm, false}
+    handler: app/public/content.get
+    description: Get a single piece of Content, by contentId
     events:
       - http:
-          path: image/get
-          method: get
-  imageList:
-    warmup: false
-    prewarm: false
-    handler: app/public/image.list
-    description: Get list of all images
-    events:
-      - http:
-          path: image/list
+          path: content/get/{contentId}
           method: get
           cors:
               origin: '*'
@@ -64,31 +70,58 @@ functions:
                 - X-Api-Key
                 - X-Amz-Security-Token
               allowCredentials: true
-  imageDelete:
-    warmup: false
-    prewarm: false
-    handler: app/public/image.delete
-    description: Delete an image
+  contentList:
+    warmup: ${env:preWarm}
+    prewarm: ${env:preWarm}
+    handler: app/public/content.list
+    description: Get list of all content
     events:
       - http:
-          path: image/delete/{id}
+          path: content/list
+          method: get
+          cors:
+              origin: '*'
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - Authorization
+                - X-Api-Key
+                - X-Amz-Security-Token
+              allowCredentials: true
+  contentDelete:
+    warmup: ${env:preWarm, false}
+    prewarm: ${env:preWarm, false}
+    handler: app/public/content.delete
+    description: Delete a Content item
+    events:
+      - http:
+          path: image/delete/{contentId}
           method: delete
+          cors:
+              origin: '*'
+              headers:
+                - Content-Type
+                - X-Amz-Date
+                - Authorization
+                - X-Api-Key
+                - X-Amz-Security-Token
+              allowCredentials: true
 
 resources:
   Resources:
-    ImagesDynamoDbTable:
+    ContentDynamoDbTable:
       Type: 'AWS::DynamoDB::Table'
       DeletionPolicy: Retain
       Properties:
         AttributeDefinitions:
           -
-            AttributeName: "imageId"
+            AttributeName: "contentId"
             AttributeType: "S"
         KeySchema:
           -
-            AttributeName: "imageId"
+            AttributeName: "contentId"
             KeyType: "HASH"
         BillingMode: PAY_PER_REQUEST
         StreamSpecification:
           StreamViewType: "NEW_AND_OLD_IMAGES"
-        TableName: ${self:provider.environment.IMAGE_TABLE}
+        TableName: ${self:provider.environment.CONTENT_TABLE}
